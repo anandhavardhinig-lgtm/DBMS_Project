@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Student Dashboard — Mess Portal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- NAVBAR -->
+<nav class="navbar">
+  <div class="container navbar-inner">
+    <a href="student.html" class="navbar-brand">
+      <div class="brand-icon">🍽️</div>
+      Mess Portal
+    </a>
+    <div class="navbar-right">
+      <span class="navbar-user" id="userBadge">Loading…</span>
+      <button class="btn btn-ghost btn-sm" onclick="logout()">Sign Out</button>
+    </div>
+  </div>
+</nav>
+
+<!-- PAGE -->
+<main class="container" style="padding-bottom: 60px;">
+
+  <div class="page-header">
+    <h1>Today's Menu</h1>
+    <p id="dateLabel">Loading today's menu…</p>
+  </div>
+
+  <div id="menuContent">
+    <div class="loader"><span></span><span></span><span></span></div>
+  </div>
+
+</main>
+
+<!-- FEEDBACK MODAL -->
+<div class="modal-overlay" id="feedbackModal">
+  <div class="modal">
+    <div class="modal-header">
+      <div>
+        <div class="modal-title">Give Feedback</div>
+        <div class="modal-subtitle" id="feedbackItemLabel">—</div>
+      </div>
+      <button class="modal-close" onclick="closeModal()">&times;</button>
+    </div>
+
+    <div class="modal-body">
+      <!-- Hidden fields -->
+      <input type="hidden" id="fbMenuId" />
+
+      <div class="form-group">
+        <label>Complaint Type</label>
+        <select class="form-control" id="fbComplaintType">
+          <option value="">Select type…</option>
+          <option value="1">Quality</option>
+          <option value="2">Quantity</option>
+          <option value="3">Hygiene</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Rating</label>
+        <div class="star-rating">
+          <input type="radio" name="rating" id="s5" value="5" /><label for="s5">★</label>
+          <input type="radio" name="rating" id="s4" value="4" /><label for="s4">★</label>
+          <input type="radio" name="rating" id="s3" value="3" /><label for="s3">★</label>
+          <input type="radio" name="rating" id="s2" value="2" /><label for="s2">★</label>
+          <input type="radio" name="rating" id="s1" value="1" /><label for="s1">★</label>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Feedback Type</label>
+        <select class="form-control" id="fbFeedbackType">
+          <option value="complaint">Complaint</option>
+          <option value="suggestion">Suggestion</option>
+          <option value="compliment">Compliment</option>
+        </select>
+      </div>
+
+      <div class="form-group">
+        <label>Comment <span style="color:var(--text-muted); font-weight:400;">(optional)</span></label>
+        <textarea class="form-control" id="fbComment" placeholder="Share your experience…" rows="3"></textarea>
+      </div>
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn btn-primary" id="submitFbBtn" onclick="submitFeedback()">Submit Feedback</button>
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  // Auth guard
+  requireAuth('student');
+
+  const user = JSON.parse(sessionStorage.getItem('user') || '{}');
+  document.getElementById('userBadge').textContent = user.name || 'Student';
+
+  // ── Date label ─────────────────────────────────────────────
+  const today = new Date();
+  document.getElementById('dateLabel').textContent =
+    today.toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+  // ── Meal meta ───────────────────────────────────────────────
+  const MEAL_META = {
+    'Breakfast': { icon: '🌅', cls: 'breakfast' },
+    'Lunch':     { icon: '☀️',  cls: 'lunch' },
+    'Snacks':    { icon: '🍪',  cls: 'snacks' },
+    'Dinner':    { icon: '🌙',  cls: 'dinner' },
+    'Fruits':    { icon: '🍎',  cls: 'fruits' },
+  };
+  const MEAL_ORDER = ['Breakfast', 'Lunch', 'Snacks', 'Dinner', 'Fruits'];
+
+  // ── Load menu ───────────────────────────────────────────────
+  async function loadMenu() {
+    const container = document.getElementById('menuContent');
+    try {
+      const res  = await apiFetch('/menu');
+      const data = await res.json();   // [{meal_name, food_name, menu_id}, …]
+
+      if (!res.ok || !Array.isArray(data) || data.length === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-icon">📋</div>
+            <h3>No menu for today</h3>
+            <p>The admin hasn't added today's menu yet. Check back later!</p>
+          </div>`;
+        return;
+      }
+
+      // Group by meal name
+      const grouped = {};
+      data.forEach(item => {
+        if (!grouped[item.meal_name]) grouped[item.meal_name] = [];
+        grouped[item.meal_name].push(item);
+      });
+
+      // Render
+      const html = MEAL_ORDER
+        .filter(m => grouped[m])
+        .map((meal, idx) => {
+          const items = grouped[meal];
+          const meta  = MEAL_META[meal] || { icon: '🍽️', cls: '' };
+          const foodCards = items.map(item => `
+            <div class="food-item">
+              <span class="food-item-name">${escHtml(item.food_name)}</span>
+              <button
+                class="btn btn-primary btn-sm"
+                onclick="openFeedbackModal(${item.menu_id}, '${escHtml(item.food_name)}', '${escHtml(meal)}')"
+              >Feedback</button>
+            </div>
+          `).join('');
+
+          return `
+            <div class="meal-section" style="animation-delay:${idx * 0.07}s">
+              <div class="meal-section-header">
+                <div class="meal-icon ${meta.cls}">${meta.icon}</div>
+                <div>
+                  <div class="meal-section-title">${meal}</div>
+                  <div class="meal-count">${items.length} item${items.length !== 1 ? 's' : ''}</div>
+                </div>
+              </div>
+              <div class="food-grid">${foodCards}</div>
+            </div>`;
+        }).join('');
+
+      container.innerHTML = html;
+    } catch (err) {
+      container.innerHTML = `
+        <div class="empty-state">
+          <div class="empty-icon">⚠️</div>
+          <h3>Could not load menu</h3>
+          <p>Make sure the Flask server is running at <strong>http://127.0.0.1:5000</strong></p>
+        </div>`;
+    }
+  }
+
+  // ── Feedback modal ──────────────────────────────────────────
+  function openFeedbackModal(menuId, foodName, mealName) {
+    document.getElementById('fbMenuId').value = menuId;
+    document.getElementById('feedbackItemLabel').textContent = `${foodName} · ${mealName}`;
+    document.querySelectorAll('input[name="rating"]').forEach(r => r.checked = false);
+    document.getElementById('fbComplaintType').value = '';
+    document.getElementById('fbFeedbackType').value  = 'complaint';
+    document.getElementById('fbComment').value = '';
+    document.getElementById('feedbackModal').classList.add('active');
+  }
+
+  function closeModal() {
+    document.getElementById('feedbackModal').classList.remove('active');
+  }
+
+  document.getElementById('feedbackModal').addEventListener('click', function(e) {
+    if (e.target === this) closeModal();
+  });
+
+  async function submitFeedback() {
+    const menuId       = document.getElementById('fbMenuId').value;
+    const complaintType = document.getElementById('fbComplaintType').value;
+    const rating       = document.querySelector('input[name="rating"]:checked')?.value;
+    const feedbackType = document.getElementById('fbFeedbackType').value;
+    const comment      = document.getElementById('fbComment').value.trim();
+
+    if (!complaintType) { showToast('Please select a complaint type.', 'warning'); return; }
+    if (!rating)        { showToast('Please select a rating.', 'warning'); return; }
+
+    const btn = document.getElementById('submitFbBtn');
+    btn.disabled = true; btn.textContent = 'Submitting…';
+
+    try {
+      const res = await apiFetch('/feedback', {
+        method: 'POST',
+        body: JSON.stringify({
+          student_id: user.student_id,
+          menu_id: parseInt(menuId),
+          complaint_type_id: parseInt(complaintType),
+          rating: parseInt(rating),
+          feedback_type: feedbackType,
+          comment,
+        }),
+      });
+      const data = await res.json();
+
+      if (res.ok) {
+        showToast('Feedback submitted successfully! 🎉', 'success');
+        closeModal();
+      } else {
+        showToast(data.message || 'Failed to submit feedback.', 'error');
+      }
+    } catch (err) {
+      showToast('Network error. Please try again.', 'error');
+    } finally {
+      btn.disabled = false; btn.textContent = 'Submit Feedback';
+    }
+  }
+
+  // ── Init ────────────────────────────────────────────────────
+  loadMenu();
+</script>
+
+</body>
+</html>

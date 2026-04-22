@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Login — Hostel Mess Portal</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<div class="login-page">
+  <div class="login-card" style="max-width:460px;">
+
+    <div class="login-card-header">
+      <div class="login-logo">🍽️</div>
+      <h1 class="login-title">Mess Portal</h1>
+      <p class="login-subtitle">Hostel Food Feedback System</p>
+    </div>
+
+    <div class="login-card-body">
+
+      <!-- Role Tabs: Student / Admin -->
+      <div class="login-tabs">
+        <button class="login-tab active" id="tabStudent" onclick="switchRole('student', this)">Student</button>
+        <button class="login-tab" id="tabAdmin" onclick="switchRole('admin', this)">Admin</button>
+      </div>
+
+      <!-- Action Tabs: Login / Register -->
+      <div style="display:flex; gap:0; border:1.5px solid var(--border); border-radius:var(--radius-sm); overflow:hidden; margin-top:-4px;">
+        <button
+          id="actionLogin"
+          onclick="switchAction('login')"
+          style="flex:1; padding:8px; font-size:0.85rem; font-family:var(--font-body); font-weight:500;
+                 border:none; cursor:pointer; background:var(--accent); color:white; transition:all 0.2s;">
+          Sign In
+        </button>
+        <button
+          id="actionRegister"
+          onclick="switchAction('register')"
+          style="flex:1; padding:8px; font-size:0.85rem; font-family:var(--font-body); font-weight:500;
+                 border:none; cursor:pointer; background:var(--surface); color:var(--text-secondary); transition:all 0.2s;">
+          Register
+        </button>
+      </div>
+
+      <!-- ══════════ STUDENT LOGIN ══════════ -->
+      <form id="formStudentLogin" onsubmit="handleLogin(event,'student')">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" id="sl_id" class="form-control" placeholder="e.g. STU001" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="sl_pwd" class="form-control" placeholder="Enter password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="sl_btn">Sign In</button>
+        </div>
+      </form>
+
+      <!-- ══════════ STUDENT REGISTER ══════════ -->
+      <form id="formStudentRegister" style="display:none;" onsubmit="handleRegister(event,'student')">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label>Student ID</label>
+            <input type="text" id="sr_id" class="form-control" placeholder="e.g. STU010" required />
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="sr_name" class="form-control" placeholder="Your full name" required />
+          </div>
+          <div class="form-group">
+            <label>Hostel Block</label>
+            <input type="text" id="sr_block" class="form-control" placeholder="e.g. A, B, C" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="sr_pwd" class="form-control" placeholder="Create a password" required />
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="sr_pwd2" class="form-control" placeholder="Repeat password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="sr_btn">Create Account</button>
+        </div>
+      </form>
+
+      <!-- ══════════ ADMIN LOGIN ══════════ -->
+      <form id="formAdminLogin" style="display:none;" onsubmit="handleLogin(event,'admin')">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label>Admin ID</label>
+            <input type="text" id="al_id" class="form-control" placeholder="e.g. ADM001" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="al_pwd" class="form-control" placeholder="Enter password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="al_btn">Sign In as Admin</button>
+        </div>
+      </form>
+
+      <!-- ══════════ ADMIN REGISTER ══════════ -->
+      <form id="formAdminRegister" style="display:none;" onsubmit="handleRegister(event,'admin')">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div class="form-group">
+            <label>Admin ID</label>
+            <input type="text" id="ar_id" class="form-control" placeholder="e.g. ADM010" required />
+          </div>
+          <div class="form-group">
+            <label>Full Name</label>
+            <input type="text" id="ar_name" class="form-control" placeholder="Your full name" required />
+          </div>
+          <div class="form-group">
+            <label>Password</label>
+            <input type="password" id="ar_pwd" class="form-control" placeholder="Create a password" required />
+          </div>
+          <div class="form-group">
+            <label>Confirm Password</label>
+            <input type="password" id="ar_pwd2" class="form-control" placeholder="Repeat password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-full btn-lg" id="ar_btn">Create Admin Account</button>
+        </div>
+      </form>
+
+    </div><!-- end card-body -->
+
+    <div class="login-footer">
+      DBMS Project &nbsp;·&nbsp; Hostel Mess Food Feedback System
+    </div>
+  </div>
+</div>
+
+<script src="script.js"></script>
+<script>
+  // Redirect if already logged in
+  if (sessionStorage.getItem('role') === 'student') location.href = 'student.html';
+  if (sessionStorage.getItem('role') === 'admin')   location.href = 'admin.html';
+
+  let currentRole   = 'student';
+  let currentAction = 'login';
+
+  // All 4 form IDs
+  const FORMS = {
+    student: { login: 'formStudentLogin', register: 'formStudentRegister' },
+    admin:   { login: 'formAdminLogin',   register: 'formAdminRegister'   },
+  };
+
+  function showOnly(formId) {
+    ['formStudentLogin','formStudentRegister','formAdminLogin','formAdminRegister']
+      .forEach(id => document.getElementById(id).style.display = 'none');
+    document.getElementById(formId).style.display = 'block';
+  }
+
+  function switchRole(role, btn) {
+    currentRole = role;
+    document.querySelectorAll('.login-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    showOnly(FORMS[role][currentAction]);
+  }
+
+  function switchAction(action) {
+    currentAction = action;
+    const isLogin = action === 'login';
+    const loginBtn = document.getElementById('actionLogin');
+    const regBtn   = document.getElementById('actionRegister');
+    loginBtn.style.background = isLogin ? 'var(--accent)' : 'var(--surface)';
+    loginBtn.style.color      = isLogin ? 'white' : 'var(--text-secondary)';
+    regBtn.style.background   = !isLogin ? 'var(--accent)' : 'var(--surface)';
+    regBtn.style.color        = !isLogin ? 'white' : 'var(--text-secondary)';
+    showOnly(FORMS[currentRole][action]);
+  }
+
+  // ── Login ─────────────────────────────────────────────────────
+  async function handleLogin(e, role) {
+    e.preventDefault();
+    const ids  = { student: { id: 'sl_id', pwd: 'sl_pwd', btn: 'sl_btn' },
+                   admin:   { id: 'al_id', pwd: 'al_pwd', btn: 'al_btn' } };
+    const f    = ids[role];
+    const btn  = document.getElementById(f.btn);
+    const id   = document.getElementById(f.id).value.trim();
+    const pwd  = document.getElementById(f.pwd).value;
+
+    btn.disabled = true; btn.textContent = 'Signing in…';
+
+    try {
+      const endpoint = role === 'student' ? '/login/student' : '/login/admin';
+      const body     = role === 'student' ? { student_id: id, password: pwd }
+                                          : { admin_id:   id, password: pwd };
+      const res  = await apiFetch(endpoint, { method: 'POST', body: JSON.stringify(body) });
+      const data = await res.json();
+
+      if (res.ok) {
+        sessionStorage.setItem('role', role);
+        sessionStorage.setItem('user', JSON.stringify(data));
+        showToast('Welcome, ' + (data.name || id) + '!', 'success');
+        setTimeout(() => { location.href = role === 'student' ? 'student.html' : 'admin.html'; }, 600);
+      } else {
+        showToast(data.message || 'Invalid credentials.', 'error');
+        btn.disabled = false;
+        btn.textContent = role === 'admin' ? 'Sign In as Admin' : 'Sign In';
+      }
+    } catch {
+      showToast('Cannot reach server. Is Flask running?', 'error');
+      btn.disabled = false;
+      btn.textContent = role === 'admin' ? 'Sign In as Admin' : 'Sign In';
+    }
+  }
+
+  // ── Register ──────────────────────────────────────────────────
+  async function handleRegister(e, role) {
+    e.preventDefault();
+
+    if (role === 'student') {
+      const id    = document.getElementById('sr_id').value.trim();
+      const name  = document.getElementById('sr_name').value.trim();
+      const block = document.getElementById('sr_block').value.trim();
+      const pwd   = document.getElementById('sr_pwd').value;
+      const pwd2  = document.getElementById('sr_pwd2').value;
+      const btn   = document.getElementById('sr_btn');
+
+      if (pwd !== pwd2) { showToast('Passwords do not match!', 'warning'); return; }
+
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      try {
+        const res  = await apiFetch('/register/student', {
+          method: 'POST',
+          body: JSON.stringify({ student_id: id, name, hostel_block: block, password: pwd }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Account created! Please sign in.', 'success');
+          document.getElementById('formStudentRegister').reset();
+          setTimeout(() => switchAction('login'), 800);
+        } else {
+          showToast(data.message || 'Registration failed.', 'error');
+        }
+      } catch {
+        showToast('Cannot reach server. Is Flask running?', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Create Account';
+      }
+
+    } else {
+      const id   = document.getElementById('ar_id').value.trim();
+      const name = document.getElementById('ar_name').value.trim();
+      const pwd  = document.getElementById('ar_pwd').value;
+      const pwd2 = document.getElementById('ar_pwd2').value;
+      const btn  = document.getElementById('ar_btn');
+
+      if (pwd !== pwd2) { showToast('Passwords do not match!', 'warning'); return; }
+
+      btn.disabled = true; btn.textContent = 'Creating account…';
+      try {
+        const res  = await apiFetch('/register/admin', {
+          method: 'POST',
+          body: JSON.stringify({ admin_id: id, name, password: pwd }),
+        });
+        const data = await res.json();
+        if (res.ok) {
+          showToast('Admin account created! Please sign in.', 'success');
+          document.getElementById('formAdminRegister').reset();
+          setTimeout(() => switchAction('login'), 800);
+        } else {
+          showToast(data.message || 'Registration failed.', 'error');
+        }
+      } catch {
+        showToast('Cannot reach server. Is Flask running?', 'error');
+      } finally {
+        btn.disabled = false; btn.textContent = 'Create Admin Account';
+      }
+    }
+  }
+</script>
+
+</body>
+</html>
